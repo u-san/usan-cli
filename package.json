@@ -1,0 +1,22 @@
+{
+  "name": "usan-cli",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "bin": {
+    "countfile": "./bin/countfile.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/u-san/usan-cli.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/u-san/usan-cli/issues"
+  },
+  "homepage": "https://github.com/u-san/usan-cli#readme"
+}
