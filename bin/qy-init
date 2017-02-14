@@ -2,13 +2,10 @@
 
 const path      = require('path');
 const ora       = require('ora');
-const inquirer  = require('inquirer')
-
-const logger    = require('../utils/logger.js');
-
-const CONSTANTS = require('../config');
-
+const inquirer  = require('inquirer');
 const exec      = require('child_process').exec;
+const logger    = require('../utils/logger.js');
+const CONSTANTS = require('../config');
 
 const _global   = {};
 

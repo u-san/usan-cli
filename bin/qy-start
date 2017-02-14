@@ -1,0 +1,19 @@
+#!/usr/bin/env node
+
+const fs        = require('fs');
+const path      = require('path');
+const glob      = require("glob");
+const inquirer  = require("inquirer");
+const _ 		= require('lodash');
+const ora 		= require('ora');
+const spawn     = require('child_process').spawn;
+const chalk 	= require('chalk');
+
+const utils     = require('../utils/utils.js');
+const logger    = require('../utils/logger.js');
+const CONSTANTS = require('../config');
+
+const CURRENT_PATH = process.cwd()
+
+// const template_folder_path = path.join(CURRENT_PATH, 'node_modules/vug-templates/templates')
+// const template_git_path    = CONSTANTS.BASE_TEMPLATE_GIT_PATH
