@@ -18,5 +18,8 @@
   "bugs": {
     "url": "https://github.com/u-san/usan-cli/issues"
   },
-  "homepage": "https://github.com/u-san/usan-cli#readme"
+  "homepage": "https://github.com/u-san/usan-cli#readme",
+  "dependencies": {
+    "commander": "^2.9.0"
+  }
 }
