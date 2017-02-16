@@ -18,6 +18,222 @@ const CURRENT_PATH = process.cwd()
 // const template_folder_path = path.join(CURRENT_PATH, 'node_modules/vug-templates/templates')
 // const template_git_path    = CONSTANTS.BASE_TEMPLATE_GIT_PATH
 
+function depHandler(dire) {
+	let spinner = ora(`正在${dire === 'update' ? '更新' : '安装'}依赖包，可能需要较长时间，请耐心等待...`);
+	let npm		= spawn('npm', [dire]);
+	spinner.start()
+	npm.stdout.on('data',(data)=>{
+		logger.log(data.toString())
+	})
+
+	npm.stderr.on('close', (err)=>{
+		spinner.stop()
+		if(err){
+			logger.log(err)
+			logger.fatal('安装失败\n')
+		}else{
+			logger.success('安装依赖包完毕\n')
+			initAsk(MENU)
+		}
+	})
+}
+
+function installDep() {
+	depHandler('install');
+}
+
+function updateDep() {
+	depHandler('update');
+}
+
+function createRouter() {
+	let options = {}
+
+	const isExist = (path)=>{
+		let file_path 	= path.resolve(CURRENT_PATH, `./src/pages${path}`)
+		let entryPath 	= utils.join(file_path, '.entry.js')
+		let vuePath 	= utils.join(file_path, '.vue')
+		let configPath 	= utils.join(file_path, '.json')
+		let logger_text = ''
+		let exist_flag 	= false
+
+
+		if (fs.existsSync(entryPath)) {
+			logger_text += `${entryPath} 文件已存在\n`
+			exist_flag = true
+		}
+		if (fs.existsSync(vuePath)) {
+			logger_text += `${vuePath} 文件已存在\n`
+			exist_flag = true
+		}
+		if (fs.existsSync(configPath)) {
+			logger_text += `${configPath} 文件已存在\n`
+			exist_flag = true
+		}
+
+		if (exist_flag === true) {
+			logger.warn(logger_text + '创建失败！\n')
+			return true
+		}
+		else {
+			_.merge(options, {
+				entryPath,
+				vuePath,
+				configPath
+			})
+			return false
+		}
+	}
+
+	const getPath = () => {
+		return new Promise((resolve, reject) => {
+			let questions = [{
+			    type: 'input',
+			    name: 'path',
+			    message: '请输路由路径，如：/user/add  (无需 .html 结尾)\n',
+			    validate: function (value) {
+			    	if(!/^\//gi.test(value)){
+						return '请以 / 开头'
+			    	}
+			    	if(/\/$/gi.test(value)){
+						return '不能以 / 结尾'
+			    	}
+			    	if(/\.html$/gi.test(value)){
+						return '不能以 .html 结尾'
+			    	}
+			      	return true
+			    }
+			  }
+			]
+
+			inquirer.prompt(questions).then(answers => {
+				if(!isExist(answers.path)){
+					resolve()
+				}else{
+					createRouter()
+				}
+			})
+		})
+	}
+
+	const chooseTemplate = () => {
+		return new Promise((resolve, reject) => {
+			let askTemplateQuestion = ()=>{
+					let template_list = fs.readdirSync(template_folder_path).filter(template_path => {
+						return !/^package\.json$/.test(template_path)
+					})
+
+					let questions = {
+					    type: 'list',
+					    name: 'template',
+					    message: '请选择可用模板\n',
+					    choices:template_list
+					}
+
+					inquirer.prompt(questions).then(answers => {
+						resolve(_.merge(options, {
+							template: answers.template
+						}))
+					})
+			}
+		
+			let exists = fs.existsSync(template_folder_path)
+			
+			if (exists) {
+				askTemplateQuestion()
+			}
+			else {
+				funs.updateTemplateRepo().then(() => {
+					askTemplateQuestion()
+				})
+			}
+		})
+	}
+
+
+	const confirm = ()=>{
+		return new Promise((resolve, reject) => {
+			var message = [
+				'系统将使用模板 【' + chalk.red(options.template) + '】 创建以下文件：',
+				'    (1)  ' + chalk.green(options.entryPath),
+				'    (2)  ' + chalk.green(options.vuePath),
+				'    (3)  ' + chalk.green(options.configPath),
+				'\n',
+				'是否继续 ？'
+			].join('\n')
+			var questions = [{
+			    type: 'confirm',
+			    name: 'isDo',
+			    message:message,
+			    default:true
+			  }
+			]
+			inquirer.prompt(questions).then(function (answers) {
+				if(answers.isDo){
+					resolve(options)
+				}else{
+					reject('文件创建终止 ！\n')
+				}
+			})
+
+		})			
+	}
+
+	const create = ()=>{
+		return new Promise((resolve, reject) => {
+			let parents = path.relative(CURRENT_PATH, options.entryPath).replace('src/pages','').split('/').length
+			if(!parents){
+				parents = './'
+			}else{
+				parents = '../'.repeat(parents)
+			}
+
+			let base_url = `${parents}node_modules/vug-templates/templates/${options.template}`
+
+			let entryPath       = options.entryPath
+			let vuePath         = options.vuePath
+			let configPath      = options.configPath
+
+			let dir             = entryPath.substring(0,entryPath.lastIndexOf('/'))
+			let entryName       = entryPath.substr(entryPath.lastIndexOf('/')+1)
+
+			entryName           = entryName.substring(0,entryName.indexOf('.'))
+
+
+			let entryFileContent = fs.readFileSync(path.resolve(template_folder_path, `${options.template}/template.entry.js`), 'utf8').toString()
+				.replace(/\[page_name\]/gi,entryName)
+				.replace(/\[base_url\]/gi,base_url)
+
+			let vueFileContent   = fs.readFileSync(path.resolve(template_folder_path, `${options.template}/template.vue`), 'utf8').toString()
+				.replace(/\[page_path\]/gi,vuePath)
+				.replace(/\[base_url\]/gi,base_url)
+
+			let configFileContent   = fs.readFileSync(path.resolve(template_folder_path, `${options.template}/config.json`), 'utf8').toString()
+
+			spawn('mkdir', ['-p',dir]).on('exit',function(){
+				try{
+					fs.writeFileSync(entryPath,entryFileContent)
+					fs.writeFileSync(vuePath,vueFileContent)
+					fs.writeFileSync(configPath, configFileContent)
+					resolve()
+				}catch(e){
+					reject(e.toString())
+				}
+			})
+		})
+	}
+
+	getPath()
+		.then(chooseTemplate)
+		.then(confirm)
+		.then(create)
+		.then(function(){
+			logger.success('文件已生成。\n')
+			initAsk()
+		})
+		.catch(e => logger.fatal(e))
+}
+
 function initAsk(menus){
 	menus = menus || MENU.slice(0)
 
