@@ -39,9 +39,11 @@ exports.isLatestVersion = ()=>{
 			res.on('end', () => {
 				try {
 				  	let parsedData = JSON.parse(rawData);
+				  	
 					if(parsedData.length){
 						remote_version = parsedData[0].name.replace('v');
 					}
+
 					let remote_version_arr = remote_version.split('.');
 					for(let i = 0, len = remote_version_arr.length; i<len; i++){
 						if(remote_version_arr[i]>local_version_arr[i]){
@@ -49,7 +51,8 @@ exports.isLatestVersion = ()=>{
 							break;
 						}
 					}
-					if(is_outdate==true){
+
+					if(is_outdate == true){
 						resolve(is_outdate);
 					}else{
 						logger.success('已是最新版本\n');

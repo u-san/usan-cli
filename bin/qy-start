@@ -1,26 +1,27 @@
 #!/usr/bin/env node
 
-const fs        = require('fs');
-const path      = require('path');
-const glob      = require("glob");
-const inquirer  = require("inquirer");
-const _ 		= require('lodash');
-const ora 		= require('ora');
-const spawn     = require('child_process').spawn;
-const chalk 	= require('chalk');
+const fs        = require('fs')
+const path      = require('path')
+const glob      = require("glob")
+const inquirer  = require("inquirer")
+const _ 		= require('lodash')
+const ora 		= require('ora')
+const spawn     = require('child_process').spawn
+const chalk 	= require('chalk')
 
-const utils     = require('../utils/utils.js');
-const logger    = require('../utils/logger.js');
-const CONSTANTS = require('../config');
+const utils     = require('../utils/utils.js')
+const logger    = require('../utils/logger.js')
+const CONSTANTS = require('../config')
 
 const CURRENT_PATH = process.cwd()
 
-// const template_folder_path = path.join(CURRENT_PATH, 'node_modules/vug-templates/templates')
-// const template_git_path    = CONSTANTS.BASE_TEMPLATE_GIT_PATH
+const template_folder_path = path.join(CURRENT_PATH, 'node_modules/usan-templates/templates')
+const template_git_path    = CONSTANTS.BASE_TEMPLATE_GIT_PATH
 
-function depHandler(dire) {
+function depHandle(dire) {
 	let spinner = ora(`正在${dire === 'update' ? '更新' : '安装'}依赖包，可能需要较长时间，请耐心等待...`);
 	let npm		= spawn('npm', [dire]);
+
 	spinner.start()
 	npm.stdout.on('data',(data)=>{
 		logger.log(data.toString())
@@ -39,21 +40,59 @@ function depHandler(dire) {
 }
 
 function installDep() {
-	depHandler('install');
+	depHandle('install');
 }
 
 function updateDep() {
-	depHandler('update');
+	depHandle('update');
+}
+
+//更新模板库
+function updateTemplateRepo() {
+	return new Promise((resolve,reject) => {
+		let exist   = fs.existsSync(template_folder_path)
+		let spinner = ora('正在拉取模板库...')
+		let npm		= spawn('npm', ['install', template_git_path])
+		spinner.start()
+		npm.stdout.on('data', data => {
+			//logger.log(data.toString())
+		})
+
+		npm.stderr.on('close', err => {
+			spinner.stop()
+			if(err){
+				logger.fatal(`拉取模板库${template_git_path}失败，请检查\n`)
+				reject()
+			}else{
+				logger.success('更新模板完毕\n')
+				resolve()
+			}
+		})
+	})
+}
+
+function manuallyUpdateTemplateRepo() {
+	updateTemplateRepo().then(() => {
+		let template_list = fs.readdirSync(template_folder_path).filter(p => {
+			return !/^package\.json$/.test(p)
+		})
+		logger.log('当前可用模板包括：\n')
+		template_list.map(template => {
+			logger.success(`${template}`);
+		})
+		logger.log('');
+		initAsk(MENU)
+	})
 }
 
 function createRouter() {
 	let options = {}
 
-	const isExist = (path)=>{
-		let file_path 	= path.resolve(CURRENT_PATH, `./src/pages${path}`)
-		let entryPath 	= utils.join(file_path, '.entry.js')
-		let vuePath 	= utils.join(file_path, '.vue')
-		let configPath 	= utils.join(file_path, '.json')
+	const isExist = targetPath => {
+		let filePath 	= path.resolve(CURRENT_PATH, `./src/pages${targetPath}`)
+		let entryPath 	= utils.join(filePath, '.entry.js')
+		let vuePath 	= utils.join(filePath, '.vue')
+		let configPath 	= utils.join(filePath, '.json')
 		let logger_text = ''
 		let exist_flag 	= false
 
@@ -116,9 +155,10 @@ function createRouter() {
 		})
 	}
 
+
 	const chooseTemplate = () => {
 		return new Promise((resolve, reject) => {
-			let askTemplateQuestion = ()=>{
+			let askTemplateQuestion = () => {
 					let template_list = fs.readdirSync(template_folder_path).filter(template_path => {
 						return !/^package\.json$/.test(template_path)
 					})
@@ -127,7 +167,7 @@ function createRouter() {
 					    type: 'list',
 					    name: 'template',
 					    message: '请选择可用模板\n',
-					    choices:template_list
+					    choices: template_list
 					}
 
 					inquirer.prompt(questions).then(answers => {
@@ -143,7 +183,7 @@ function createRouter() {
 				askTemplateQuestion()
 			}
 			else {
-				funs.updateTemplateRepo().then(() => {
+				updateTemplateRepo().then(() => {
 					askTemplateQuestion()
 				})
 			}
@@ -153,7 +193,7 @@ function createRouter() {
 
 	const confirm = ()=>{
 		return new Promise((resolve, reject) => {
-			var message = [
+			let message = [
 				'系统将使用模板 【' + chalk.red(options.template) + '】 创建以下文件：',
 				'    (1)  ' + chalk.green(options.entryPath),
 				'    (2)  ' + chalk.green(options.vuePath),
@@ -161,15 +201,17 @@ function createRouter() {
 				'\n',
 				'是否继续 ？'
 			].join('\n')
-			var questions = [{
-			    type: 'confirm',
-			    name: 'isDo',
-			    message:message,
-			    default:true
+
+			let questions = [{
+			    type   : 'confirm',
+			    name   : 'ret',
+			    message: message,
+			    default: true
 			  }
 			]
+
 			inquirer.prompt(questions).then(function (answers) {
-				if(answers.isDo){
+				if(answers.ret){
 					resolve(options)
 				}else{
 					reject('文件创建终止 ！\n')
@@ -179,41 +221,42 @@ function createRouter() {
 		})			
 	}
 
-	const create = ()=>{
+	const create = () => {
 		return new Promise((resolve, reject) => {
 			let parents = path.relative(CURRENT_PATH, options.entryPath).replace('src/pages','').split('/').length
+			
 			if(!parents){
 				parents = './'
 			}else{
 				parents = '../'.repeat(parents)
 			}
 
-			let base_url = `${parents}node_modules/vug-templates/templates/${options.template}`
+			let base_url = `${parents}node_modules/usan-templates/templates/${options.template}`
 
-			let entryPath       = options.entryPath
-			let vuePath         = options.vuePath
-			let configPath      = options.configPath
+			let entryPath  = options.entryPath
+			let vuePath    = options.vuePath
+			let configPath = options.configPath
 
-			let dir             = entryPath.substring(0,entryPath.lastIndexOf('/'))
-			let entryName       = entryPath.substr(entryPath.lastIndexOf('/')+1)
+			let dir        = entryPath.substring(0, entryPath.lastIndexOf('/'))
+			let entryName  = entryPath.substr(entryPath.lastIndexOf('/')+1)
 
-			entryName           = entryName.substring(0,entryName.indexOf('.'))
+			entryName = entryName.substring(0,entryName.indexOf('.'))
 
 
 			let entryFileContent = fs.readFileSync(path.resolve(template_folder_path, `${options.template}/template.entry.js`), 'utf8').toString()
-				.replace(/\[page_name\]/gi,entryName)
-				.replace(/\[base_url\]/gi,base_url)
+				.replace(/\[page_name\]/gi, entryName)
+				.replace(/\[base_url\]/gi, base_url)
 
-			let vueFileContent   = fs.readFileSync(path.resolve(template_folder_path, `${options.template}/template.vue`), 'utf8').toString()
-				.replace(/\[page_path\]/gi,vuePath)
-				.replace(/\[base_url\]/gi,base_url)
+			let vueFileContent = fs.readFileSync(path.resolve(template_folder_path, `${options.template}/template.vue`), 'utf8').toString()
+				.replace(/\[page_path\]/gi, vuePath)
+				.replace(/\[base_url\]/gi, base_url)
 
-			let configFileContent   = fs.readFileSync(path.resolve(template_folder_path, `${options.template}/config.json`), 'utf8').toString()
+			let configFileContent = fs.readFileSync(path.resolve(template_folder_path, `${options.template}/config.json`), 'utf8').toString()
 
 			spawn('mkdir', ['-p',dir]).on('exit',function(){
 				try{
-					fs.writeFileSync(entryPath,entryFileContent)
-					fs.writeFileSync(vuePath,vueFileContent)
+					fs.writeFileSync(entryPath, entryFileContent)
+					fs.writeFileSync(vuePath, vueFileContent)
 					fs.writeFileSync(configPath, configFileContent)
 					resolve()
 				}catch(e){
@@ -227,11 +270,16 @@ function createRouter() {
 		.then(chooseTemplate)
 		.then(confirm)
 		.then(create)
-		.then(function(){
+		.then(() => {
 			logger.success('文件已生成。\n')
 			initAsk()
 		})
 		.catch(e => logger.fatal(e))
+}
+
+// 启动开发服务器
+function startDev(){
+	spawn('webpack-dev-server',['--port=9876'], { stdio:'inherit' }) 
 }
 
 function initAsk(menus){
@@ -271,10 +319,10 @@ const MENU = [
 	{text:'2. 更新依赖包', fun: updateDep},
 	{text:'3. 新建页面', fun: createRouter},
 	{text:'4. 启动开发服务器', fun: startDev},
-	{text:'5. 使用调试模式（仅修改js文件host为locahost）', fun: createHTML},
-	{text:'6. 编译全部', fun: build},
+	// {text:'5. 使用调试模式（仅修改js文件host为locahost）', fun: createHTML},
+	// {text:'6. 编译全部', fun: build},
 	// {text:'7. 编译单个文件', fun: buildOne},
-	{text:'8. 重建全部入口文件', fun: reCreateEntry},
+	// {text:'8. 重建全部入口文件', fun: reCreateEntry},
 	{text:'9. 手动更新模板库', fun: manuallyUpdateTemplateRepo},
 	{text:'0. 回到初始菜单',fun: initAsk}
 ]

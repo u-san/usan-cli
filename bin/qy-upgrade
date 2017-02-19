@@ -1,29 +1,29 @@
 #!/usr/bin/env node
 
-const program   = require('commander');
-const ora       = require('ora');
-const path      = require('path');
-const spawn     = require('child_process').spawn;
-const utils     = require('../utils/utils.js');
-const logger    = require('../utils/logger.js');
-const CONSTANTS = require('../config');
+const program   = require('commander')
+const ora       = require('ora')
+const path      = require('path')
+const spawn     = require('child_process').spawn
+const utils     = require('../utils/utils.js')
+const logger    = require('../utils/logger.js')
+const CONSTANTS = require('../config')
 
-
-run();
+run()
 
 function run() {
-    var update  = spawn('npm', ['install', '-g', CONSTANTS.BASE_GIT_PATH])
-
-    var spinner = ora('正在更新qy，请等待...')
+    let update  = spawn('npm', ['install', '-g', CONSTANTS.BASE_ClI_GIT_PATH])
+    let spinner = ora('正在更新qy，请等待...')
+    
     spinner.start()
 
     update.on('close', code => {
-        spinner.stop();
-        var new_version = require('../package.json').version;
+        spinner.stop()
+        let new_version = require('../package.json').version
+
         if(code != 0){
-            logger.fatal(`更新失败，错误码 ${code}`);
+            logger.fatal(`更新失败，错误码 ${code}`)
         }else{
-            logger.success(`更新成功，当前版本 ${new_version}`);        
+            logger.success(`更新成功，当前版本 ${new_version}`)
         }
     })
 }
