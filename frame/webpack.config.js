@@ -1,106 +1,19 @@
-var webpack           = require('webpack');
-var OpenBrowserPlugin = require('open-browser-webpack-plugin');
-var CleanWebpackPlugin= require('clean-webpack-plugin');
+const webpack            = require('webpack');
+const OpenBrowserPlugin  = require('open-browser-webpack-plugin');
+const CleanWebpackPlugin = require('clean-webpack-plugin');
+const path               = require("path");
+const glob               = require("glob");
+const fs                 = require("fs");
+const spawn              = require('child_process').spawn;
+const isDebug	         = !(process.env.NODE_ENV === 'production');
 
-var log 			  = console.log;
-var spawn  			  = require('child_process').spawn;
-var isDebug			  = true;
+let configs		   = glob.sync("./src/pages/**/*.json");
+let entrys		   = glob.sync("./src/pages/**/*.entry.js");
+let template_path  = './node_modules/usan-templates/templates';
+let webpackEntrys  = {};
+let webpackPlugins = [];
 
-var arguments = process.argv.splice(2).join(' ');
-if(arguments.indexOf('-build') != -1){
-	isDebug = false;
-}
-
-
-var path           = require("path");
-var glob           = require("glob");
-
-var configs		   = glob.sync("./src/pages/**/*.json");
-
-var entrys		   = glob.sync("./src/pages/**/*.entry.js");
-
-var template_path  = './node_modules/usan-templates/templates'
-
-var webpackEntrys  = {};
-var webpackPlugins = [];
-
-// 动态创建 html 文件，不用 html 插件，提高编译速度
-function CreateHtml() {}
-CreateHtml.prototype.apply = function(compiler) {
-  	compiler.plugin("emit", function(compilation, callback) { 
-		var tasks = [];
-		configs.forEach(config=>{
-			var scripts;
-			var jsFile;
-			var savePath =  config.replace('./src/pages/','').replace('.json','.html');
-			var base_url, dist_base_url;
-			if(isDebug){
-				base_url = 'http://localhost:9876';
-				dist_base_url = ''
-			}else{
-				base_url = ''
-				dist_base_url = '/fe/dist';
-			}
-			jsFile   = config.replace('./src/pages/','').replace('.json','.js');
-			scripts  = `
-					<script src="${base_url}${dist_base_url}/common.js"></script>
-					<script src="${base_url}${dist_base_url}/${jsFile}""></script>
-				</body>
-				</html>`;
-
-			var rf    = require("fs");  
-			var template = JSON.parse(rf.readFileSync(config).toString()).template;
-			var data  = rf.readFileSync(path.join(template_path, template, "/layout.html"),"utf-8");  
-			var fileContents = data.replace(/<!--placeholder-->(.|\n)*/gi,scripts);
-
-			compilation.assets[savePath] = {
-		      source: function() {
-		        return fileContents;
-		      },
-		      size: function() {
-		        return fileContents.length;
-		      }
-		    };
-		})
-		callback();
-	});
-};
- 
-(function(){
-	var entryName = '';
-	var obj 	  = null;
-	entrys.forEach(entry=>{
-		entryName = entry.replace('./src/pages/','').replace('.entry.js','');
-		webpackEntrys[entryName] = entry;
-	});
-})();
-
-webpackPlugins.push(new webpack.optimize.CommonsChunkPlugin('common.js'));
-
-webpackPlugins.push(new CreateHtml());
-
-if(!isDebug){
-	webpackPlugins.push(
-		new CleanWebpackPlugin(['dist'], {
-			verbose: true, 
-			dry: false
-		})
-	);
-	webpackPlugins.push(new webpack.optimize.UglifyJsPlugin({
-		output: {
-			comments: false,  // remove all comments
-		},
-		compress: {
-			warnings: false
-		}
-	}));
-}else{
-	webpackPlugins.push(new OpenBrowserPlugin({url: 'http://localhost:9876'}));
-	webpackPlugins.push(new webpack.HotModuleReplacementPlugin());
-}
-
-
-var webpack_config = {
+let webpack_config = {
 	entry:webpackEntrys,
 
 	output: {
@@ -133,5 +46,83 @@ var webpack_config = {
 	    port:9876
 	}
 };
+
+// 动态创建 html 文件，不用 html 插件，提高编译速度
+function CreateHtml() {}
+CreateHtml.prototype.apply = compiler => {
+  	compiler.plugin("emit", (compilation, callback) => { 
+		let tasks = [];
+		configs.forEach(config => {
+			let scripts,
+				jsFile,
+				base_url,
+				dist_base_url,
+				savePath = config.replace('./src/pages/','').replace('.json','.html');
+
+			if (isDebug) {
+				base_url      = 'http://localhost:9876';
+				dist_base_url = ''
+			}
+			else {
+				base_url = ''
+				dist_base_url = '/fe/dist';
+			}
+
+			jsFile  = config.replace('./src/pages/','').replace('.json','.js');
+			scripts = `
+					<script src="${base_url}${dist_base_url}/common.js"></script>
+					<script src="${base_url}${dist_base_url}/${jsFile}"></script>
+				</body>
+				</html>`;
+
+			let tpl  = JSON.parse(fs.readFileSync(config).toString()).template,
+				data = fs.readFileSync(path.join(template_path, tpl, "/layout.html"),"utf-8"),
+				fileContents = data.replace(/<!--placeholder-->(.|\n)*/gi, scripts);
+
+			compilation.assets[savePath] = {
+		      source: () => {
+		        return fileContents;
+		      },
+		      size: () => {
+		        return fileContents.length;
+		      }
+		    };
+		})
+		callback();
+	});
+};
+ 
+(() => {
+	var entryName = '';
+	var obj 	  = null;
+	entrys.forEach(entry=>{
+		entryName = entry.replace('./src/pages/','').replace('.entry.js','');
+		webpackEntrys[entryName] = entry;
+	});
+})();
+
+webpackPlugins.push(new webpack.optimize.CommonsChunkPlugin('common.js'));
+webpackPlugins.push(new CreateHtml());
+
+if (!isDebug) {
+	webpackPlugins.push(
+		new CleanWebpackPlugin(['dist'], {
+			verbose: true, 
+			dry: false
+		})
+	);
+	webpackPlugins.push(new webpack.optimize.UglifyJsPlugin({
+		output: {
+			comments: false,
+		},
+		compress: {
+			warnings: false
+		}
+	}));
+}
+else {
+	webpackPlugins.push(new OpenBrowserPlugin({url: 'http://localhost:9876'}));
+	webpackPlugins.push(new webpack.HotModuleReplacementPlugin());
+}
 
 module.exports = webpack_config;

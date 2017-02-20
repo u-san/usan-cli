@@ -10,22 +10,8 @@ const CONSTANTS = require('../config')
 
 const _global   = {}
 
-const questions = {
-    type: 'input',
-    message: '在当前目录初始化前端目录（fe）？',
-    name: 'ok',
-    default: 'fe'
-}
-
-inquirer.prompt(questions).then(answers => {
-    if (answers.ok) {
-        _global.proj_name = answers.ok
-        run()
-    }
-})
-
 function run() {
-    exec('ls | grep ^' + _global.proj_name + '$', (error, stdout, stderr) => {
+    exec(`ls | grep ^${_global.proj_name}$`, (error, stdout, stderr) => {
         if(stdout){
             logger.fatal(`该项目已存在，请删除目录下${_global.proj_name}`)
         }else{
@@ -35,11 +21,25 @@ function run() {
 }
 
 function execInit(){
-    exec('cp -r ' + CONSTANTS.FRAMEWORK_PATH + ' ' + _global.proj_name, (error, stdout, stderr) => {
+    exec(`cp -r ${CONSTANTS.FRAMEWORK_PATH} ${_global.proj_name}`, (error, stdout, stderr) => {
         if(error){
             logger.fatal('复制项目初始目录失败，请检查')
         }else{
             logger.success(`已初始化成功! 请执行\n cd ${_global.proj_name} ; qy start;`)
         }
-    });
+    })
 }
+
+const questions = {
+    type: 'input',
+    message: '在当前目录初始化前端目录（fe）？',
+    name: 'init',
+    default: 'fe'
+}
+
+inquirer.prompt(questions).then(answers => {
+    if (answers.init) {
+        _global.proj_name = answers.init
+        run()
+    }
+})

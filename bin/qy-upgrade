@@ -8,8 +8,6 @@ const utils     = require('../utils/utils.js')
 const logger    = require('../utils/logger.js')
 const CONSTANTS = require('../config')
 
-run()
-
 function run() {
     let update  = spawn('npm', ['install', '-g', CONSTANTS.BASE_ClI_GIT_PATH])
     let spinner = ora('正在更新qy，请等待...')
@@ -27,3 +25,5 @@ function run() {
         }
     })
 }
+
+run()

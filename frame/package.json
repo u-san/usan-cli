@@ -22,7 +22,7 @@
     "vue-loader": "^10.2.0",
     "vue-html-loader": "^1.2.3",
     "vue-style-loader": "^2.0.0",
-    "usan-templates": "git+https://github.com/u-san/usan-templates.git",
+    "usan-templates": "git+https://github.com/u-san/usan-templates.git"
   },
   "devDependencies": {
     "clean-webpack-plugin": "^0.1.10",
