@@ -370,7 +370,7 @@ function upgrade(){
 	cmd.on('exit', (err)=>{
 		if(err){
 			logger.warn(err)
-			logger.warn('vug版本更新失败，使用本地安装版本\n')
+			logger.warn('版本更新失败，使用本地安装版本\n')
 		}else{
 			logger.success('更新版本完毕\n')
 		}

@@ -39,7 +39,6 @@ exports.isLatestVersion = ()=>{
 			res.on('end', () => {
 				try {
 				  	let parsedData = JSON.parse(rawData);
-				  	
 					if(parsedData.length){
 						remote_version = parsedData[0].name.replace('v');
 					}

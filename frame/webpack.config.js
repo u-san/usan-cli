@@ -14,7 +14,7 @@ let webpackEntrys  = {};
 let webpackPlugins = [];
 
 let webpack_config = {
-	entry:webpackEntrys,
+	entry: webpackEntrys,
 
 	output: {
 		filename: '[name].js',
