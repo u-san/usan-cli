@@ -28,9 +28,6 @@ let webpack_config = {
 			{test: /\.less$/, loader: 'style!css!less'}
 		]
 	},
-	babel:{
-		presets:['es2015']
-	},
 	resolve: {
 	  alias: {
 	    'vue$': 'vue/dist/vue.common.js'
