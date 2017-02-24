@@ -50,31 +50,17 @@ CreateHtml.prototype.apply = compiler => {
   	compiler.plugin("emit", (compilation, callback) => { 
 		let tasks = [];
 		configs.forEach(config => {
-			let scripts,
-				jsFile,
-				base_url,
-				dist_base_url,
-				savePath = config.replace('./src/pages/','').replace('.json','.html');
-
-			if (isDebug) {
-				base_url      = 'http://localhost:9876';
-				dist_base_url = ''
-			}
-			else {
-				base_url = ''
-				dist_base_url = '/fe/dist';
-			}
-
-			jsFile  = config.replace('./src/pages/','').replace('.json','.js');
-			scripts = `
-					<script src="${base_url}${dist_base_url}/common.js"></script>
-					<script src="${base_url}${dist_base_url}/${jsFile}"></script>
-				</body>
-				</html>`;
+			let jsFile   = config.replace('./src/pages/','').replace('.json','.js'),
+				savePath = config.replace('./src/pages/','').replace('.json','.html'),
+				base_url = isDebug ? 'http://localhost:9876' : '/fe/dist',
+				scripts  = `
+					<script src="${base_url}/common.js"></script>
+					<script src="${base_url}/${jsFile}"></script>`;
 
 			let tpl  = JSON.parse(fs.readFileSync(config).toString()).template,
-				data = fs.readFileSync(path.join(template_path, tpl, "/layout.html"),"utf-8"),
-				fileContents = data.replace(/<!--placeholder-->(.|\n)*/gi, scripts);
+				data = fs.readFileSync(path.join(template_path, tpl, "/layout.html"),"utf-8");
+
+			let fileContents = data.replace(/<!--placeholder-->/gi, scripts);
 
 			compilation.assets[savePath] = {
 		      source: () => {

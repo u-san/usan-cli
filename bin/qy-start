@@ -307,14 +307,12 @@ function createHTML() {
 			let	jsFile   = path.relative(CURRENT_PATH, config).replace('src/pages/', '').replace('.json', '.js')
 			let scripts  = `
 					<script src='http://localhost:9876/common.js'></script>
-					<script src='http://localhost:9876/${jsFile}'></script>
-				</body>
-				</html>`
+					<script src='http://localhost:9876/${jsFile}'></script>`
 
 			let template = JSON.parse(fs.readFileSync(config).toString()).template
 			let data     = fs.readFileSync(path.resolve(template_folder_path, `${template}/layout.html`), 'utf-8')
 
-			let fileContents = data.replace(/<!--placeholder-->(.|\n)*/gi, scripts)
+			let fileContents = data.replace(/<!--placeholder-->/gi, scripts)
 			spawn('mkdir', ['-p', savePath.substring(0,savePath.lastIndexOf('/'))])
 				.on('exit',() => {
 					fs.writeFileSync(savePath, fileContents)
@@ -336,7 +334,11 @@ function buildAll() {
 	logger.log('正在编译中,请稍候...\n')
 
 	let webpack = exec('NODE_ENV=production webpack')
-	
+
+	webpack.stdout.on('data', data => {
+		console.log(data)
+	});
+
 	webpack.on('exit', code => {
 		if (code == 0) {
 			logger.log(`编译完成 ！耗时：${( (Date.now()-d))/1000 } 秒\n`) 
