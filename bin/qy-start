@@ -94,21 +94,14 @@ function createRouter() {
 		let logger_text = ''
 		let exist_flag 	= false
 
+		let paths = [entryPath, vuePath, configPath]
 
-		if (fs.existsSync(entryPath)) {
-			logger_text += `${entryPath} 文件已存在\n`
-			exist_flag = true
-		}
-
-		if (fs.existsSync(vuePath)) {
-			logger_text += `${vuePath} 文件已存在\n`
-			exist_flag = true
-		}
-
-		if (fs.existsSync(configPath)) {
-			logger_text += `${configPath} 文件已存在\n`
-			exist_flag = true
-		}
+		paths.forEach(path => {
+			if (fs.existsSync(path)) {
+				logger_text += `${path} 文件已存在\n`
+				exist_flag = true
+			}
+		})
 
 		if (exist_flag === true) {
 			logger.warn(logger_text + '创建失败！\n')
